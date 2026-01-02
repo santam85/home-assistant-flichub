@@ -4,13 +4,15 @@ from __future__ import annotations
 from homeassistant.components.event import EventEntity, EventDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from pyflichub.button import FlicButton
+from pyflichub.flichub import FlicHubInfo
 
 from . import FlicHubEntryData
 from .const import (
     DOMAIN,
-    DATA_BUTTONS,
     SIGNAL_BUTTON_EVENT,
     EVENT_DATA_SERIAL_NUMBER,
     EVENT_DATA_CLICK_TYPE,
@@ -20,32 +22,37 @@ from .const import (
 EVENT_TYPES = ["single_press", "double_press", "hold"]
 CLICK_MAP = {"single": "single_press", "double": "double_press", "hold": "hold"}
 
-async def async_setup_entry(
-        hass: HomeAssistant,
-        entry: ConfigEntry,
-        async_add_entities: AddEntitiesCallback,
-) -> None:
-    data_entry: FlicHubEntryData = hass.data[DOMAIN][entry.entry_id]
-    buttons = data_entry.coordinator.data[DATA_BUTTONS]
-
-    entities: list[FlicHubButtonEventEntity] = []
-    for serial, button in buttons.items():
-        entities.append(FlicHubButtonEventEntity(entry, serial, button.name))
-
-    async_add_entities(entities, update_before_add=False)
-
-
 class FlicHubButtonEventEntity(EventEntity):
     _attr_device_class = EventDeviceClass.BUTTON
     _attr_event_types = EVENT_TYPES
     _attr_has_entity_name = True
 
-    def __init__(self, entry: ConfigEntry, serial_number: str, name: str) -> None:
-        self._entry = entry
-        self._serial_number = serial_number
-        self._attr_unique_id = f"{serial_number}_event"
-        self._attr_name = name
-        self._unsub = None
+    def __init__(self, hass: HomeAssistant, coordinator, config_entry, button: FlicButton, flic_hub: FlicHubInfo):
+        super().__init__(coordinator, config_entry, button.serial_number, flic_hub)
+        self._attr_unique_id = f"{self.serial_number}-event"
+        self._serial_number = button.serial_number
+        self._attr_name = button.name
+        self._button = button
+        self._flic_hub = flic_hub
+        self._click_type = None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._serial_number)},
+            manufacturer="Flic",
+            model="Flic Button",
+            name=self._attr_name,
+            via_device=(DOMAIN, self.mac_address),
+        )
+
+    @property
+    def mac_address(self):
+        """Return a unique ID to use for this entity."""
+        if self.flic_hub.has_ethernet() and self._ip_address == self.flic_hub.ethernet.ip:
+            return format_mac(self.flic_hub.ethernet.mac)
+        if self.flic_hub.has_wifi() and self._ip_address == self.flic_hub.wifi.ip:
+            return format_mac(self.flic_hub.wifi.mac)
 
     async def async_added_to_hass(self) -> None:
         signal = f"{SIGNAL_BUTTON_EVENT}_{self._entry.entry_id}"

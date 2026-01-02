@@ -14,9 +14,9 @@ from .const import DOMAIN
 from .const import EVENT_CLICK, EVENT_DATA_CLICK_TYPE, \
     EVENT_DATA_SERIAL_NUMBER, EVENT_DATA_NAME, DATA_BUTTONS, DATA_HUB
 from .entity import FlicHubButtonEntity, FlicHubEntity
+from .event import FlicHubButtonEventEntity
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
-
 
 async def async_setup_entry(hass, entry, async_add_devices):
     """Setup binary_sensor platform."""
@@ -26,6 +26,7 @@ async def async_setup_entry(hass, entry, async_add_devices):
     devices = []
     for serial_number, button in buttons.items():
         devices.extend([
+            FlicHubButtonEventEntity(hass, data_entry.coordinator, entry, button, flic_hub),
             FlicHubButtonBinarySensor(hass, data_entry.coordinator, entry, button, flic_hub),
             FlicHubButtonPassiveBinarySensor(data_entry.coordinator, entry, button, flic_hub),
             FlicHubButtonActiveDisconnectBinarySensor(data_entry.coordinator, entry, button, flic_hub),
