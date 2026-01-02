@@ -4,6 +4,7 @@ import logging
 
 from homeassistant import core
 from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
+from homeassistant.components.zha.helpers import async_add_entities
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from pyflichub.button import FlicButton
@@ -26,7 +27,6 @@ async def async_setup_entry(hass, entry, async_add_devices):
     devices = []
     for serial_number, button in buttons.items():
         devices.extend([
-            FlicHubButtonEventEntity(hass, data_entry.coordinator, entry, button, flic_hub),
             FlicHubButtonBinarySensor(hass, data_entry.coordinator, entry, button, flic_hub),
             FlicHubButtonPassiveBinarySensor(data_entry.coordinator, entry, button, flic_hub),
             FlicHubButtonActiveDisconnectBinarySensor(data_entry.coordinator, entry, button, flic_hub),

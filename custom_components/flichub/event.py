@@ -16,18 +16,34 @@ from .const import (
     SIGNAL_BUTTON_EVENT,
     EVENT_DATA_SERIAL_NUMBER,
     EVENT_DATA_CLICK_TYPE,
-    EVENT_DATA_NAME,
+    EVENT_DATA_NAME, DATA_BUTTONS, DATA_HUB, EVENT_CLICK,
 )
 
 EVENT_TYPES = ["single_press", "double_press", "hold"]
 CLICK_MAP = {"single": "single_press", "double": "double_press", "hold": "hold"}
+
+async def async_setup_entry(
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        async_add_entities: AddEntitiesCallback,
+) -> None:
+
+    data_entry: FlicHubEntryData = hass.data[DOMAIN][entry.entry_id]
+    buttons = data_entry.coordinator.data[DATA_BUTTONS]
+    flic_hub = data_entry.coordinator.data[DATA_HUB]
+
+    entities = [
+        FlicHubButtonEventEntity(data_entry.coordinator, entry, button, flic_hub)
+        for serial_number, button in buttons.items()
+    ]
+    async_add_entities(entities, update_before_add=False)
 
 class FlicHubButtonEventEntity(EventEntity):
     _attr_device_class = EventDeviceClass.BUTTON
     _attr_event_types = EVENT_TYPES
     _attr_has_entity_name = True
 
-    def __init__(self, hass: HomeAssistant, coordinator, config_entry, button: FlicButton, flic_hub: FlicHubInfo):
+    def __init__(self, coordinator, config_entry, button: FlicButton, flic_hub: FlicHubInfo):
         super().__init__(coordinator, config_entry, button.serial_number, flic_hub)
         self._attr_unique_id = f"{self.serial_number}-event"
         self._serial_number = button.serial_number
