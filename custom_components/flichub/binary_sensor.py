@@ -176,7 +176,12 @@ class FlicHubButtonBinarySensor(FlicHubButtonEntity, BinarySensorEntity):
         self._attr_unique_id = f"{self.serial_number}-button"
         self._is_on = False
         self._click_type = None
-        hass.bus.async_listen(EVENT_CLICK, self._event_callback)
+        self._unsub = hass.bus.async_listen(EVENT_CLICK, self._event_callback)
+
+    async def async_will_remove_from_hass(self):
+        if self._unsub:
+            self._unsub()
+            self._unsub = None
 
     @property
     def is_on(self):

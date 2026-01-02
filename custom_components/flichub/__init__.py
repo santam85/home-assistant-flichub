@@ -16,13 +16,14 @@ from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, EVENT_HOMEASSISTANT_
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from pyflichub.button import FlicButton
 from pyflichub.client import FlicHubTcpClient, ServerCommand
 from pyflichub.command import Command
 from pyflichub.event import Event
-from .const import CLIENT_READY_TIMEOUT, EVENT_CLICK, EVENT_DATA_NAME, EVENT_DATA_CLICK_TYPE, \
+from .const import CLIENT_READY_TIMEOUT, SIGNAL_BUTTON_EVENT, EVENT_CLICK, EVENT_DATA_NAME, EVENT_DATA_CLICK_TYPE, \
     EVENT_DATA_SERIAL_NUMBER, DATA_BUTTONS, DATA_HUB, REQUIRED_SERVER_VERSION, DEFAULT_SCAN_INTERVAL
 from .const import DOMAIN
 from .const import PLATFORMS
@@ -48,11 +49,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     def on_event(button: FlicButton, event: Event):
         _LOGGER.debug(f"Event: {event}")
         if event.event == "button":
+            # event bus for backwards compatibility
             hass.bus.fire(EVENT_CLICK, {
                 EVENT_DATA_SERIAL_NUMBER: button.serial_number,
                 EVENT_DATA_NAME: button.name,
                 EVENT_DATA_CLICK_TYPE: event.action
             })
+            # new behavior (entities can subscribe)
+            async_dispatcher_send(
+                hass,
+                f"{SIGNAL_BUTTON_EVENT}_{entry.entry_id}",
+                {
+                    EVENT_DATA_SERIAL_NUMBER: button.serial_number,
+                    EVENT_DATA_NAME: button.name,
+                    EVENT_DATA_CLICK_TYPE: event.action,
+                },
+            )
         if event.event == "buttonReady":
             hass.async_create_task(coordinator.async_refresh())
 

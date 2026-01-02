@@ -21,13 +21,14 @@ DATA_HUB = "network"
 BINARY_SENSOR_DEVICE_CLASS = "connectivity"
 
 # Events
+SIGNAL_BUTTON_EVENT = f"{DOMAIN}_button_event"
 EVENT_CLICK = f"{DOMAIN}_click"
 EVENT_DATA_CLICK_TYPE = "click_type"
 EVENT_DATA_NAME = "name"
 EVENT_DATA_SERIAL_NUMBER = "serial_number"
 
 # Platforms
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.EVENT]
 
 # Defaults
 DEFAULT_NAME = DOMAIN
